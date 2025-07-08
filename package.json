@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "demo": "tsx src/demo.ts",
+    "server": "tsx src/server.ts",
     "dev": "tsx watch src/demo.ts",
+    "dev:server": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/demo.js"
+    "start": "node dist/demo.js",
+    "start:server": "node dist/server.js"
   },
   "dependencies": {
     "dotenv": "^16.0.3",
@@ -15,6 +18,7 @@
     "ioredis": "^5.3.2"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
