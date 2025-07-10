@@ -91,7 +91,7 @@ npm start:server
 
 ## Demo Output
 
-The demo will show performance comparisons and rate limiting behavior:
+The demo will show performance comparisons and fault tolerance behavior:
 
 ### Caching Performance
 ```
@@ -127,6 +127,32 @@ Request 11: ❌ BLOCKED (429) - Rate limit exceeded
 Request 1: ✅ ALLOWED
 Request 2: ✅ ALLOWED
 ...
+```
+
+### Load Balanced Server Response
+```json
+{
+  "message": "Performance & Scalability Demo - Load Balanced Instance",
+  "instance": 12345,
+  "timestamp": "2025-07-09T...",
+  "concepts": {
+    "caching": "Redis-like cache simulation with TTL support",
+    "rateLimiting": "Token bucket and sliding window algorithms",
+    "loadBalancing": "Round-robin distribution with health monitoring",
+    "faultTolerance": "Circuit breaker, retry mechanisms, and timeout protection"
+  },
+  "endpoints": {
+    "/health": "Health check for load balancer monitoring",
+    "/unstable": "Circuit breaker demonstration (50% failure rate)",
+    "/retry-demo": "Retry mechanism with exponential backoff",
+    "/timeout-demo": "Timeout protection (2-second limit)"
+  },
+  "performance": {
+    "cacheHit": "~5ms response time",
+    "cacheMiss": "~105ms response time (DB + cache write)",
+    "directDB": "~100ms response time"
+  }
+}
 ```
 
 ## Performance Concepts Demonstrated
@@ -184,6 +210,18 @@ Request 2: ✅ ALLOWED
 - **Sliding Window**: 100 requests per 60-second window
 - **Request cost**: 1 token per request
 
+### Load Balancer Settings
+- **Algorithm**: Round-robin distribution
+- **Health checks**: Every 30 seconds via `/health` endpoint
+- **Failover**: Automatic removal after 3 consecutive failures
+- **Recovery**: 30-second timeout before retry
+
+### Fault Tolerance Settings
+- **Circuit Breaker**: 50% error threshold, 10-second reset timeout
+- **Retry Logic**: Maximum 3 attempts with exponential backoff
+- **Timeout Protection**: 2-second timeout for demo endpoints
+- **Health Monitoring**: Continuous service availability checks
+
 ### Switching to Real Redis
 To use actual Redis instead of simulation:
 
@@ -212,20 +250,68 @@ npm run server
 - `DELETE /api/user/:id/cache` - Invalidate user cache (No rate limiting)
 - `GET /health` - Health check endpoint
 
-### Testing the API
+## Load-Balanced Server
+
+The balanced server demonstrates fault tolerance patterns:
 
 ```bash
-# Test with caching and token bucket rate limiting
+# Start the balanced server
+npm run balanced-server
+```
+
+### Fault Tolerance Endpoints
+
+- `GET /` - Main route with performance concepts overview and instance identification
+- `GET /health` - Health check for load balancer
+- `GET /unstable` - Circuit breaker demonstration (50% failure rate)
+- `GET /retry-demo` - Retry mechanism with exponential backoff
+- `GET /timeout-demo` - Timeout handling (2-second limit)
+
+### Testing All Components
+
+```bash
+# Test basic server with rate limiting
 curl http://localhost:3000/api/user/123
-
-# Test without cache and sliding window rate limiting
-curl http://localhost:3000/api/user/123/no-cache
-
-# Invalidate cache
-curl -X DELETE http://localhost:3000/api/user/123/cache
-
-# Health check
 curl http://localhost:3000/health
+
+# Test load-balanced server with fault tolerance
+curl http://localhost:3000/
+curl http://localhost:3000/unstable
+curl http://localhost:3000/retry-demo
+curl http://localhost:3000/timeout-demo
+
+# Test with Docker load balancer (Nginx on port 8080)
+curl http://localhost:8080/
+curl http://localhost:8080/health
+curl http://localhost:8080/unstable
+
+# Test rate limiting (repeat quickly to trigger limits)
+for i in {1..15}; do curl http://localhost:3000/api/user/123; done
+
+# Monitor different instances handling requests (Docker)
+watch -n 1 'curl -s http://localhost:8080/ | jq .instance'
+
+# Test circuit breaker behavior
+for i in {1..10}; do curl http://localhost:3000/unstable; done
+```
+
+## Docker Deployment
+
+Deploy with load balancing using Docker Compose:
+
+```bash
+# Start all services (3 app instances + Nginx + Redis)
+docker-compose up --build
+
+# Scale specific services
+docker-compose up --scale app1=2 --scale app2=2
+
+# View logs from specific service
+docker-compose logs -f nginx
+docker-compose logs -f app1
+
+# Access through load balancer
+curl http://localhost:8080/
 ```
 
 ## API Reference
