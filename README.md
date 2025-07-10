@@ -16,26 +16,37 @@ This demo illustrates key performance and scalability concepts:
 - **Sliding Window**: Provides smooth rate limiting over time windows
 - **Fixed Window**: Simple time-window based limiting
 
+### N+1 Query Problem
+- **Problem**: 1 query for main data + N queries for related data
+- **Impact**: Linear performance degradation with data size
+- **Solution**: Batched queries, JOINs, or DataLoader patterns
+- **Demo**: Side-by-side comparison of inefficient vs optimized approaches
+
 ## Project Structure
 
 ```
 src/
 ├── models/
-│   └── user.ts              # Data types and interfaces
+│   └── user.ts              # Data types and interfaces (User, Post)
 ├── infrastructure/
 │   ├── cache.ts             # Cache service (simulated Redis)
+│   ├── circuitBreaker.ts    # Circuit breaker implementation
+│   ├── loadBalancer.ts      # Load balancer with health monitoring
 │   ├── mockCache.ts         # Alternative mock cache implementation
-│   └── database.ts          # Database operations (simulated)
+│   └── database.ts          # Database operations with N+1 demos
 ├── services/
-│   └── userService.ts       # Business logic combining cache + database
+│   ├── userService.ts       # Business logic combining cache + database
+│   ├── queryService.ts      # N+1 query problem demonstrations
+│   └── faultTolerance.ts    # Fault tolerance patterns
 ├── middleware/
 │   ├── tokenBucket.ts       # Token bucket rate limiter
 │   ├── slidingWindow.ts     # Redis-based sliding window rate limiter
 │   └── mockSlidingWindow.ts # In-memory sliding window rate limiter
 ├── config/
 │   └── rateLimitConfig.ts   # Rate limiting configuration
-├── demo.ts                  # Performance and rate limiting demo
-└── server.ts               # Express server with different rate limiting strategies
+├── demo.ts                  # Comprehensive performance demo
+├── server.ts               # Express server with rate limiting and N+1 demos
+└── balancedServer.ts       # Load-balanced server with fault tolerance
 ```
 
 ## Features
@@ -112,21 +123,32 @@ getUserProfile (cache hit): 5.12ms
 getUserWithoutCache: 100.45ms
 ```
 
-### Rate Limiting Behavior
+### N+1 Query Problem Demonstration
 ```
-🚦 PART 2: RATE LIMITING
+🔗 PART 3: N+1 QUERY PROBLEM
 =====================================
 
---- Testing Token Bucket (10 tokens, 1 token/sec) ---
-Request 1: ✅ ALLOWED
-Request 2: ✅ ALLOWED
-...
-Request 11: ❌ BLOCKED (429) - Rate limit exceeded
+❌ N+1 QUERY PROBLEM DEMONSTRATION
+Getting 3 users with their posts (inefficient way)
+🔍 DB Query: Getting 3 users
+🔍 DB Query: Getting posts for user user123
+🔍 DB Query: Getting posts for user user456
+🔍 DB Query: Getting posts for user user789
+Total queries executed: 1 + 3 = 4 queries
+Total time: 312.45ms
 
---- Testing Sliding Window Mock (100 req/min) ---
-Request 1: ✅ ALLOWED
-Request 2: ✅ ALLOWED
-...
+✅ OPTIMIZED QUERY SOLUTION
+Getting 3 users with their posts (efficient way)
+🔍 DB Query: Getting 3 users
+🔍 DB Query: Getting posts for 3 users (optimized)
+Total queries executed: 2 queries (regardless of user count)
+Total time: 145.23ms
+
+📊 PERFORMANCE RESULTS:
+N+1 Approach:      312.45ms (4 queries)
+Optimized Approach: 145.23ms (2 queries)
+Improvement:        2.2x faster
+Time Saved:         167.22ms (53.5% reduction)
 ```
 
 ### Load Balanced Server Response
@@ -250,6 +272,12 @@ npm run server
 - `DELETE /api/user/:id/cache` - Invalidate user cache (No rate limiting)
 - `GET /health` - Health check endpoint
 
+### N+1 Query Problem Endpoints
+
+- `GET /api/users-with-posts/n1?userIds=user123,user456` - Demonstrates N+1 problem (inefficient)
+- `GET /api/users-with-posts/optimized?userIds=user123,user456` - Shows optimized solution (efficient)
+- `GET /api/query-comparison?userIds=user123,user456,user789` - Side-by-side performance comparison
+
 ## Load-Balanced Server
 
 The balanced server demonstrates fault tolerance patterns:
@@ -293,6 +321,11 @@ watch -n 1 'curl -s http://localhost:8080/ | jq .instance'
 
 # Test circuit breaker behavior
 for i in {1..10}; do curl http://localhost:3000/unstable; done
+
+# Test N+1 query problem demonstrations
+curl "http://localhost:3000/api/users-with-posts/n1?userIds=user123,user456"
+curl "http://localhost:3000/api/users-with-posts/optimized?userIds=user123,user456"
+curl "http://localhost:3000/api/query-comparison?userIds=user123,user456,user789"
 ```
 
 ## Docker Deployment
@@ -363,6 +396,10 @@ After running this demo, you'll understand:
 - Different rate limiting algorithms and their use cases
 - How to implement rate limiting in Express.js applications
 - The importance of burst handling vs sustained rate control
+- What the N+1 query problem is and why it's problematic
+- How query optimization can dramatically improve application performance
+- The importance of efficient database access patterns for scalability
+- When to use batching, JOINs, and DataLoader patterns
 
 ## Next Steps
 

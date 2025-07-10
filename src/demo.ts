@@ -1,4 +1,5 @@
 import { userService } from './services/userService.js';
+import { queryService } from './services/queryService.js';
 import { tokenBucketLimiter } from './middleware/tokenBucket.js';
 import { mockSlidingWindowLimiter } from './middleware/mockSlidingWindow.js';
 
@@ -94,11 +95,12 @@ async function runPerformanceDemo() {
   );
 
   console.log('\n--- Multiple concurrent requests ---');
-  // Test concurrent requests
-  const promises = Array(5).fill(null).map((_, i) => 
+  // Test concurrent requests with existing users
+  const existingUsers = ['user123', 'user456', 'user789', 'user101', 'user202'];
+  const promises = existingUsers.map((userId, i) => 
     measureTime(
-      () => userService.getUserProfile(`user${i}`),
-      `Concurrent request ${i}`
+      () => userService.getUserProfile(userId),
+      `Concurrent request ${i + 1} (${userId})`
     )
   );
   
@@ -124,6 +126,18 @@ async function runPerformanceDemo() {
   console.log('\n--- Testing Mock Sliding Window Rate Limiter ---');
   await testRateLimiter(mockSlidingWindowLimiter, 'Sliding Window Mock (100 req/min)', 5);
 
+  // ============================================
+  // PART 3: N+1 QUERY PROBLEM DEMO
+  // ============================================
+  console.log('\n\n🔗 PART 3: N+1 QUERY PROBLEM');
+  console.log('=====================================');
+
+  // Demonstrate the N+1 query problem and its solution
+  await queryService.demonstrateScenarios();
+
+  // Show detailed query execution for educational purposes
+  await queryService.showQueryExecution(['user123', 'user456', 'user789']);
+
   console.log('\n✅ Demo completed!');
   console.log('\n📈 Key Learnings:');
   console.log('  • Cache hits are ~20x faster than DB queries');
@@ -131,6 +145,10 @@ async function runPerformanceDemo() {
   console.log('  • Sliding window provides smooth rate limiting over time');
   console.log('  • Different rate limiting strategies serve different use cases');
   console.log('  • Mock implementations help test concepts without external dependencies');
+  console.log('  • N+1 queries can severely impact performance as data grows');
+  console.log('  • Optimized queries with batching/JOINs solve N+1 problems');
+  console.log('  • Early query optimization prevents major performance issues');
+  console.log('  • Database query patterns significantly affect application scalability');
 }
 
 // Run the demo
